@@ -1,0 +1,89 @@
+---
+title: "Calibration"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(tidyverse)
+library(gmodels)
+
+library(usethis)
+library(devtools)
+library(questionr)
+
+```
+
+Read in data
+
+```{r}
+
+rawOutput = read_csv(file = "../Program Drafts/opioidABM_04212020_erie_clean calibrate_test-table.csv", skip = 6)  %>% janitor::clean_names() %>%
+  arrange(run_number, step) %>% 
+  filter(yearnum>2012) %>% 
+  group_by(run_number, yearnum) 
+
+```
+
+Function, *cleanModel* to read in raw data, manipulate it and output a table of values from ABM
+- Year
+- Median and 95% credible interval rates (%) for:
+  - overdose deaths (od_die)
+  - all overdoses (od)
+  - opioid use disorder (oud)
+  - medication for opioid use disorder (moud)
+  
+
+```{r}
+
+# This version sums across 52 weeks and divides by total pop of system (N = anyone who was in system that year)
+# exports data file of median and 95% credible interval, per year
+# next version should take into account actual county pop?
+
+cleanModel = function(M_input) {
+  
+  M_input = M_input %>% 
+    group_by(run_number, yearnum) %>% 
+    summarise_all(funs(max,sum)) %>% 
+    select(run_number, yearnum, year_pop_max,year_oud_pop_max,year_moud_pop_max,year_relapse_pop_max, year_leave_max, num_od_die_sum,num_od_sum) %>% 
+    mutate_at(vars(-year_pop_max, -run_number, -yearnum), funs(. / year_pop_max)) %>% 
+    mutate_at(vars(-year_pop_max, -run_number, -yearnum), funs(. *100), ) %>% 
+    rename_all(~stringr::str_replace_all(., "sum", "%")) %>% 
+    rename_at(vars(-year_pop_max), ~stringr::str_replace_all(., "pop_max", "%"))
+  
+  M_output = M_input %>% 
+  ungroup() %>% 
+  group_by(yearnum) %>% 
+    summarise_all(list(med = ~ median(x =.),Q025 = ~ quantile(x = ., probs = 0.025),Q975 = ~ quantile(x = ., probs = 0.975))) %>% 
+  select(yearnum, contains("num_od_die"), contains("num_od_%"), contains("_oud"), contains("moud")) %>% 
+    rename_all(~stringr::str_replace_all(., "num_", "")) %>% 
+    rename_all(~stringr::str_replace_all(., "year_", "")) %>% 
+    rename_all(~stringr::str_replace_all(., "_%_", "")) 
+  
+  return(M_output)
+  
+}
+
+ABMoutputTable = cleanModel(rawOutput)
+
+ABMoutputTable 
+  
+
+```
+
+Export table to a csv fille to read into excel
+
+```{r}
+
+dateuse = Sys.Date()
+csvFileName = paste("ABMoutputTable_", dateuse,".csv",sep="")
+
+write_csv(ABMoutputTable, path = csvFileName)
+
+
+```
+
+ 
+ 
