@@ -20,11 +20,12 @@ Read in data
 
 ```{r}
 
-rawOutput = read_csv(file = "../Program Drafts/opioidABM_04212020_erie_clean calibrate_test-table.csv", skip = 6)  %>% janitor::clean_names() %>%
+rawOutput = read_csv(file = "../Program Drafts/opioidABM_04072020_erie_clean0422.csv", skip = 6)  %>% janitor::clean_names() %>%
   arrange(run_number, step) %>% 
   filter(yearnum>2012) %>% 
   group_by(run_number, yearnum) 
 
+summary(rawOutput)
 ```
 
 Function, *cleanModel* to read in raw data, manipulate it and output a table of values from ABM
@@ -76,11 +77,11 @@ ABMoutputTable
 Export table to a csv fille to read into excel
 
 ```{r}
-
-dateuse = Sys.Date()
-csvFileName = paste("ABMoutputTable_", dateuse,".csv",sep="")
-
-write_csv(ABMoutputTable, path = csvFileName)
+  
+  dateuse = Sys.Date()
+  csvFileName = paste("ABMoutputTable_Erie", dateuse,".csv",sep="")
+  
+  write_csv(ABMoutputTable, path = csvFileName)
 
 
 ```
